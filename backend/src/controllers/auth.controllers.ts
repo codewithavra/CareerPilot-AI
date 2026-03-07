@@ -60,18 +60,36 @@ export const register = asyncHandler(async function (
   });
 
   /**
+   * generating and setting tokens
+   */
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  /**
    * create response and send
    */
+  const options = {
+    httpOnly: true,
+    sameSite: 'strict' as const,
+    secure: true,
+  };
   const { username: uname, email: uemail } = user;
   const response = new ApiResponse(201, `User creation successful`, 'ok', {
     username: uname,
     email: uemail,
+    accessToken
   });
 
   /**
    * send response
    */
-  res.status(201).json(response);
+  res
+    .status(201)
+    .cookie('refreshToken', refreshToken, options)
+    .json(response);
 });
 
 /**
