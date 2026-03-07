@@ -5,7 +5,9 @@
 
 // node imports
 import { Document, model, Schema } from 'mongoose';
-import bcrypt from 'bcryptjs';
+import jwt, { type SignOptions } from 'jsonwebtoken';
+import { ENV } from '../ENV';
+
 /**
  * user document interface
  */
@@ -14,6 +16,8 @@ interface User extends Document {
   password: string;
   email: string;
   createdAt: Date;
+  generateAccessToken(): string;
+  generateRefreshToken(): string;
 }
 
 /**
@@ -46,6 +50,33 @@ const userSchema = new Schema<User>({
     default: Date.now,
   },
 });
+
+userSchema.methods.generateAccessToken = function generateAccessToken(
+  this: User,
+): string {
+  return jwt.sign(
+    {
+      sub: this._id.toString(),
+      username: this.username,
+      email: this.email,
+    },
+    ENV.ACCESSTOKEN_SECRET,
+    { expiresIn: ENV.ACCESSTOKEN_EXPIRY as SignOptions['expiresIn'] },
+  );
+};
+
+userSchema.methods.generateRefreshToken = function generateRefreshToken(
+  this: User,
+): string {
+  return jwt.sign(
+    {
+      sub: this._id.toString(),
+    },
+    ENV.REFRESHTOKEN_SECRET,
+    { expiresIn: ENV.REFRESHTOKEN_EXPIRY as SignOptions['expiresIn'] },
+  );
+};
+
 /**
  * user model
  */
