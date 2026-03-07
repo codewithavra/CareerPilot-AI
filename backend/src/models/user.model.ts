@@ -15,6 +15,7 @@ interface User extends Document {
   username: string;
   password: string;
   email: string;
+  refreshToken : string
   createdAt: Date;
   generateAccessToken(): string;
   generateRefreshToken(): string;
@@ -44,6 +45,9 @@ const userSchema = new Schema<User>({
     required: true,
     unique: true,
     trim: true,
+  },
+  refreshToken:{
+    type : String,
   },
   createdAt: {
     type: Date,
