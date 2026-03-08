@@ -9,6 +9,7 @@
 
 import { Router } from 'express';
 import { login, logout, register } from '../controllers';
+import { verifyJWT } from '../middlewares/auth.middleware';
 
 export const authRouter = Router();
 
@@ -28,4 +29,4 @@ authRouter.post('/login', login);
  * @route POST api/v1/auth/logout
  */
 
-authRouter.post('/logout', logout);
+authRouter.post('/logout', verifyJWT , logout);

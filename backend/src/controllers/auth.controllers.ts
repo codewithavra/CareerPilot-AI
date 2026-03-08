@@ -6,7 +6,7 @@
 /**
  * node modules
  */
-import bcrypt from 'bcryptjs';
+import bcrypt, { truncates } from 'bcryptjs';
 import type { Request, Response } from 'express';
 /**
  * other modules
@@ -14,6 +14,7 @@ import type { Request, Response } from 'express';
 import { User } from '../models/user.model';
 import { loginUserSchema, registerUserSchema } from '../schemas';
 import { ApiError, ApiResponse, asyncHandler } from '../utils';
+import { ENV } from '../ENV';
 
 /**
  * @Route api/v1/auth/register
@@ -74,22 +75,20 @@ export const register = asyncHandler(async function (
   const options = {
     httpOnly: true,
     sameSite: 'strict' as const,
-    secure: true,
+    secure: ENV.NODE_ENV === 'production',
   };
   const { username: uname, email: uemail } = user;
   const response = new ApiResponse(201, `User creation successful`, 'ok', {
+    id: user._id,
     username: uname,
     email: uemail,
-    accessToken
+    accessToken,
   });
 
   /**
    * send response
    */
-  res
-    .status(201)
-    .cookie('refreshToken', refreshToken, options)
-    .json(response);
+  res.status(201).cookie('refreshToken', refreshToken, options).json(response);
 });
 
 /**
@@ -129,10 +128,23 @@ export const login = asyncHandler(async function (req: Request, res: Response) {
     throw new ApiError(400, `Invalid credential`);
   }
 
+  const accessToken = existingUser.generateAccessToken();
+  const refreshToken = existingUser.generateRefreshToken();
+
+  existingUser.refreshToken = refreshToken;
+  await existingUser.save({ validateBeforeSave: false });
+
   const { username: uname, email: uemail } = existingUser;
+  const options = {
+    httpOnly: true,
+    sameSite: 'strict' as const,
+    secure: ENV.NODE_ENV === 'production',
+  };
   const response = new ApiResponse(200, `login successful`, `ok`, {
+    id: existingUser._id,
     username: uname,
     email: uemail,
+    accessToken,
   });
   res.status(200).json(response);
 });
@@ -146,6 +158,26 @@ export const logout = asyncHandler(async function (
   req: Request,
   res: Response,
 ) {
+  if (!req.user) {
+    throw new ApiError(401, 'Unauthorized');
+  }
+
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $unset: {
+        refreshToken: 1,
+      },
+    },
+    {
+      returnDocument : 'after'
+    },
+  );
+  const options = {
+    httpOnly: true,
+    sameSite: 'strict' as const,
+    secure: ENV.NODE_ENV === 'production',
+  };
   const response = new ApiResponse(200, `Logout successful`, `ok`, {});
-  res.status(200).json(response);
+  res.status(200).clearCookie('refreshToken', options).json(response);
 });
