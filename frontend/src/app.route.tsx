@@ -13,10 +13,14 @@ import { createBrowserRouter } from "react-router";
  */
 import { Login } from "@/features/auth/pages/Login";
 import { Register } from "@/features/auth/pages/Register";
+import { LandingPage } from "@/features/auth/pages/LandingPage";
 
 
 export const Router = createBrowserRouter([
     {
+        path : '/',
+        Component : LandingPage
+    },{
         path : '/login',
         Component : Login
     },{
